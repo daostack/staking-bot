@@ -1,5 +1,8 @@
+
 import numpy as np
 import pandas as pd
+"""import os
+os.chdir('/home/itush/git/staking_bot') # TODO: drop these lines when done with debugging."""
 from get_data import get_proposal_data
 
 
@@ -100,4 +103,3 @@ def create_features(training_set, test_set):
     _apply_score(test_set, voting_scores, voters, multiply_score_by_quantity=False)
     return test_set
 
-# TODO: Tests.

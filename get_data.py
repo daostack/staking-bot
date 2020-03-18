@@ -65,17 +65,15 @@ query = """{
 }"""
 
 
-def _make_time_readable(data):
-    time_columns = ['boostedAt', 'closingAt', 'createdAt', 'preBoostedAt', 'quietEndingPeriodBeganAt', 'executedAt']
+def _make_time_readable(data, time_columns):
+    data = data.copy()
     for time_column in time_columns:
         data[time_column] = pd.to_datetime(data[time_column], unit='s')
     return data
 
 
-def _convert_number_columns(data):
-    number_columns = ['confidence', 'confidenceThreshold', 'stakesAgainst', 'stakesFor', 'totalRepWhenCreated',
-                      'totalRepWhenExecuted', 'votesAgainst', 'votesFor', 'ethReward', 'reputationReward',
-                      'nativeTokenReward', 'externalTokenReward']
+def _convert_number_columns(data, number_columns):
+    data = data.copy()
     for number_column in number_columns:
         data[number_column] = data[number_column].astype('float')
     return data
@@ -97,11 +95,12 @@ def get_proposal_data(i, which, data):
     return ret
 
 
-def _get_preboost_votes_data(i, boosted, data):
+def _get_preboost_votes_data(i, boosted, data, verbose):
     try:
         votes = get_proposal_data(i=i, which='votes', data=data)
     except Exception as exc:
-        print(exc)
+        if verbose:
+            print(exc)
         return [0,0,0,0]
     if boosted:
         votes = votes[votes.createdAt <= data.loc[i, 'preBoostedAt']].copy()
@@ -114,11 +113,12 @@ def _get_preboost_votes_data(i, boosted, data):
     return [forVoters, againstVoters, forVotesRep, againstVotesRep]
 
 
-def _get_stakes_data(i, data):
+def _get_stakes_data(i, data, verbose):
     try:
         stakes = get_proposal_data(i=i, which='stakes', data=data)
     except Exception as exc:
-        print(exc)
+        if verbose:
+            print(exc)
         return [0,0,None,None]
     against_stakers_df = stakes[stakes.outcome=='Fail']
     for_stakers_df = stakes[stakes.outcome=='Pass']
@@ -129,7 +129,7 @@ def _get_stakes_data(i, data):
     return [for_stakers_count, against_stakers_count, for_stakers, against_stakers]
 
 
-def _extract_data(data, boosted=True):
+def _extract_data(data, verbose, boosted=True):
     newVotingCols = ['for_preboost_voters','against_preboost_voters','preboost_for_rep','preboost_against_rep']
     newTokenCols = ['ethReward', 'reputationReward', 'nativeTokenReward', 'externalTokenReward']
     newStakesCols = ['for_stakers_count', 'against_stakers_count', 'for_stakers', 'against_stakers']
@@ -137,52 +137,46 @@ def _extract_data(data, boosted=True):
     for col in newVotingCols + newTokenCols + newStakesCols:
         data[col] = np.nan
     for i, row in data.iterrows():
-        data.loc[i, newVotingCols] = _get_preboost_votes_data(i, boosted, data)
-        data.loc[i, newStakesCols] = _get_stakes_data(i, data)
+        data.loc[i, newVotingCols] = _get_preboost_votes_data(i, boosted, data, verbose)
+        data.loc[i, newStakesCols] = _get_stakes_data(i, data, verbose)
         contributionReward = data.loc[i, 'contributionReward']
         if contributionReward:
             data.loc[i, newTokenCols] = contributionReward.values()
     return data
 
 
-def _wrangle_data(data):
-    data = _make_time_readable(data)
-    data = _extract_data(data)
-    data = _convert_number_columns(data)
+def _wrangle_data(data, verbose):
+    time_columns = ['boostedAt', 'closingAt', 'createdAt', 'preBoostedAt', 'quietEndingPeriodBeganAt', 'executedAt']
+    number_columns = ['confidence', 'confidenceThreshold', 'stakesAgainst', 'stakesFor', 'totalRepWhenCreated',
+                      'totalRepWhenExecuted', 'votesAgainst', 'votesFor', 'ethReward', 'reputationReward',
+                      'nativeTokenReward', 'externalTokenReward']
+    data = _make_time_readable(data, time_columns)
+    data = _extract_data(data, verbose=verbose)
+    data = _convert_number_columns(data, number_columns)
     data.dropna(subset=['preBoostedAt'], inplace=True)  # we will only be looking at preboosted proposals
     # expired means failed even if the votes are net positive:
     data.loc[data.stage == 'ExpiredInQueue', 'winningOutcome'] = 'Fail'
     return data
 
 
-
-
-def get_data_for_training():
+def get_data():
+    print("Downloading data...")
     result = _run_query(query)
     proposals = result['data']['dao']['proposals']
-    df = pd.DataFrame(data=proposals)
-    df = df[(df.stage == 'Executed') | (df.stage == 'ExpiredInQueue')]
-    df = _wrangle_data(df)
+    return pd.DataFrame(data=proposals)
+
+
+def extract_training_data(data, verbose=False):
+    df = data[(data.stage == 'Executed') | (data.stage == 'ExpiredInQueue')]
+    print("Rearranging training data...")
+    df = _wrangle_data(df, verbose=verbose)
     return df
 
 
-
-def create_features(train_data, test_data):
-    return test_data_with_features
-
-def create_and_train_model(data_with_features):
-
-    return trained_model
-
-def get_data_for_prediction():
-
-    return data
+def extract_prediction_data(data, verbose=False):
+    df = data[(data.stage.isin(['Queued', 'Boosted', 'PreBoosted']))]
+    print("Rearranging prediction data...")
+    df = _wrangle_data(df, verbose=verbose)
+    return df
 
 
-def predict(trained_model, data_for_prediction):
-    return prediction
-
-
-def transmit_predictions(prediction):
-
-    return slack_message
