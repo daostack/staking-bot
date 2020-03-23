@@ -174,7 +174,7 @@ def extract_training_data(data, verbose=False):
 
 
 def extract_prediction_data(data, verbose=False):
-    df = data[(data.stage.isin(['Queued', 'Boosted', 'PreBoosted']))]
+    df = data[(data.stage.isin(['Queued', 'PreBoosted']))]
     print("Rearranging prediction data...")
     df = _wrangle_data(df, verbose=verbose)
     return df
