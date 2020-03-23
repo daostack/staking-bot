@@ -1,8 +1,6 @@
 
 import numpy as np
 import pandas as pd
-"""import os
-os.chdir('/home/itush/git/staking_bot') # TODO: drop these lines when done with debugging."""
 from get_data import get_proposal_data
 
 
