@@ -43,14 +43,12 @@ def transmit_predictions():
     predictions['prediction'] = round(predictions['prediction'], 2)
     preboosted = predictions[predictions.stage == 'PreBoosted']
     queued = predictions[predictions.stage == 'Queued']
-
     preboosted.apply(lambda row:
-                     transmit_text(f"PreBoosted proposal: {row.title} has a {row.prediction} chance of passing."),
-                     axis=1)
-    transmit_text("Queued proposal predictions are highly experimental!!! but,")
+                     transmit_text(f"Proposal PreBoosted at {row.preBoostedAt} "
+                                   f"titled '{row.title}' has a {row.prediction} chance of passing."), axis=1)
     queued.apply(lambda row:
-                     transmit_text(f"Queued proposal: {row.title} currently has a {row.prediction} chance of passing."),
-                     axis=1)
+                     transmit_text(f"~~EXPERIMENTAL~~ Queued proposal created at {row.createdAt} "
+                                   f"titled '{row.title}' currently has a {row.prediction} chance of passing."), axis=1)
 
 
 if __name__ == "__main__":
