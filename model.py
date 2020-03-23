@@ -28,7 +28,7 @@ def predict_current_proposals(trained_model, data=None):
 
 
 def transmit_text(text):
-    slack_webhook_url = "https://hooks.slack.com/services/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"
+    slack_webhook_url = "https://hooks.slack.com/services/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"
     print(f"Transmitting: '{text}'")
     transmit = requests.post(slack_webhook_url, json={"text": text})
     print(transmit.status_code, transmit.reason)
