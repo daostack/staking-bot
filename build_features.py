@@ -71,7 +71,7 @@ def _assign_score(row, metric, metricer, quantity, multiply_score_by_quantity, I
 def _calc_proposal_ID_score(row, score, scores_df, multiply_score_by_quantity):
     if score not in scores_df.columns:
         raise Exception(f"sorry but {score} must be a column in your scores_df")
-    metric = scores_df.index.name.replace("er", "es")
+    metric = scores_df.columns[0][0].replace("er", "es")
     metricer, quantity = _assign_ID_and_quantity(metric)
     metric_column = metricer
     if metric == 'votes':
