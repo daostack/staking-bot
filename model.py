@@ -2,6 +2,7 @@ import xgboost
 from get_data import extract_training_data, extract_prediction_data, get_data
 from build_features import create_features
 import requests
+import sys
 
 FEATURES = ['win_amount_ratio', 'reputation_score', 'confidence']
 
@@ -27,14 +28,14 @@ def predict_current_proposals(trained_model, data=None):
     return x
 
 
-def transmit_text(text):
+def transmit_text(text, webhook_url):
     slack_webhook_url = "https://hooks.slack.com/services/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"
     print(f"Transmitting: '{text}'")
-    transmit = requests.post(slack_webhook_url, json={"text": text})
+    transmit = requests.post(webhook_url, json={"text": text})
     print(transmit.status_code, transmit.reason)
 
 
-def transmit_predictions():
+def transmit_predictions(webhook_url):
     data = get_data()
     print("Creating trained model...")
     model = create_trained_model(data)
@@ -45,11 +46,18 @@ def transmit_predictions():
     queued = predictions[predictions.stage == 'Queued']
     preboosted.apply(lambda row:
                      transmit_text(f"Proposal PreBoosted at {row.preBoostedAt} "
-                                   f"titled '{row.title}' has a {row.prediction} chance of passing."), axis=1)
+                                   f"titled '{row.title}' has a {row.prediction} chance of passing.",
+                                   webhook_url), axis=1)
     queued.apply(lambda row:
                      transmit_text(f"~~EXPERIMENTAL~~ Queued proposal created at {row.createdAt} "
-                                   f"titled '{row.title}' currently has a {row.prediction} chance of passing."), axis=1)
+                                   f"titled '{row.title}' currently has a {row.prediction} chance of passing.",
+                                   webhook_url), axis=1)
+
+
+def main(argv):
+    transmit_predictions(argv)
 
 
 if __name__ == "__main__":
-    transmit_predictions()
+    main(sys.argv[1])
+
